@@ -6,7 +6,7 @@ use App\Contract\Dto\Game;
 
 interface ScoreBoardStorage
 {
-    public function get(Game $game): Game;
+    public function get(Game $game): ?Game;
 
     public function add(Game $game): void;
 

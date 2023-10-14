@@ -8,15 +8,19 @@ and then allow them to leave our application boundaries.
 
 -- Contract
 
-Our main contract that will allow every one to create any ScoreBoard using our standards.
+Our main contract that will allow every one to create any ScoreBoard using our standards. In real live this 
+should be independent repository(or module/local module).
 
 -- DataAccess
  
-Storage implementation for our [FootballScoreBoard.php]
+Storage implementation for our [FootballScoreBoard.php].In real live this
+should be independent repository(or module/local module).
+
 
 -- Domain
    
-Our detail of implementation for FootBallScoreBoard.
+Our detail of implementation for FootBallScoreBoard.In real live this
+should be independent repository(or module/local module).
 
 All dependencies in real world should be injected using any kind of DI container that all 
 metadata/factories will be provided in configuration file.

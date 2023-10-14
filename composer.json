@@ -11,6 +11,7 @@
     }
   },
   "require-dev": {
-    "phpunit/phpunit": "10.4.1"
+    "phpunit/phpunit": "10.4.1",
+    "dg/bypass-finals": "^1.5"
   }
 }

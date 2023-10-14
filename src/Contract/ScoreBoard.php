@@ -7,7 +7,7 @@ use App\Contract\Dto\SummaryOfGames;
 
 interface ScoreBoard
 {
-    public function startGame(Game $game): string;
+    public function startGame(Game $game): Game;
 
     public function updateGame(Game $game): string;
 

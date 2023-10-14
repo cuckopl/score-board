@@ -34,13 +34,23 @@ final class Game
         return $this->gameStatus;
     }
 
-    public static function createNewGame(Team $homeTeam, Team $awayTeam): Game
+    public static function createNewGame(string $homeTeam, string $awayTeam): Game
     {
-        return new Game($homeTeam, $awayTeam, GameStatus::NOT_STARTED);
+        return new Game(
+            Team::createNewTeam($homeTeam),
+            Team::createNewTeam($awayTeam),
+            GameStatus::NOT_STARTED
+        );
     }
-
+//todo: create special enums that will allow to add score to team by some constant? Or validate
+//todo: better inside service??
     public static function createOngoingGame(Team $homeTeam, Team $awayTeam): Game
     {
         return new Game($homeTeam, $awayTeam, GameStatus::ON_GOING);
+    }
+
+    public static function createFinished(Team $homeTeam, Team $awayTeam): Game
+    {
+        return new Game($homeTeam, $awayTeam, GameStatus::FINISHED);
     }
 }

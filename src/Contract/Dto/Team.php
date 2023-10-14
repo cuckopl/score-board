@@ -25,7 +25,12 @@ final class Team
     }
 
 
-    public static function createTeam(string $teamName, int $score)
+    public static function createNewTeam(string $teamName): Team
+    {
+        return new Team($teamName, 0);
+    }
+
+    public static function updateTeam(string $teamName, int $score): Team
     {
         return new Team($teamName, $score);
     }
