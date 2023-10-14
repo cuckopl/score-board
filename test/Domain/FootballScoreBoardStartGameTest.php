@@ -5,9 +5,11 @@ namespace App\Test\Domain;
 use App\Contract\Dto\Game;
 use App\Contract\Dto\Team;
 use App\Contract\Exception\GameException;
+use App\Contract\Exception\GameExistsException;
 use App\Domain\FootballScoreBoard;
 use App\Domain\Repository\ScoreBoardStorage;
 use DG\BypassFinals;
+use PHPUnit\Framework\MockObject\Exception;
 use PHPUnit\Framework\TestCase;
 
 class FootballScoreBoardStartGameTest extends TestCase
@@ -36,9 +38,9 @@ class FootballScoreBoardStartGameTest extends TestCase
         $scoreBoard->startGame($game);
     }
 
-    public function testIfGameScoreIsZeroZeroOnStart(): void
+    public function testIfGameScoreIsZeroOnStart(): void
     {
-        //I really want to have DTOs classes to be final and no one can extend.
+        //I really want to have DTOs classes to be final and no one can extend them.
         BypassFinals::enable();
 //given
         $game = $this->getMockBuilder(Game::class)
@@ -70,6 +72,11 @@ class FootballScoreBoardStartGameTest extends TestCase
             "Poland"
         );
 
+        $expectedResult = Game::createOngoingGame(
+            Team::createNewTeam("United States"),
+            Team::createNewTeam("Poland")
+        );
+
         /** @var ScoreBoardStorage $scoreBoardMock */
         $scoreBoardMock = $this->createMock(ScoreBoardStorage::class);
         $scoreBoardMock
@@ -79,11 +86,17 @@ class FootballScoreBoardStartGameTest extends TestCase
 
         $scoreBoard = new FootballScoreBoard($scoreBoardMock);
         //when
-        $scoreBoard->startGame($game);
+        $result = $scoreBoard->startGame($game);
+
+        $this->assertSame($expectedResult->gameStatus(), $result->gameStatus());
+        $this->assertSame($expectedResult->awayTeam()->teamName(), $result->awayTeam()->teamName());
+        $this->assertSame($expectedResult->homeTeam()->teamName(), $result->homeTeam()->teamName());
+        $this->assertNotSame($game, $result);
+
 
     }
 
-    public function testNewGameHasCorrectStatus(): void
+    public function testThrowExceptionOnWrongGameStatus(): void
     {
         //given
         $game =
@@ -123,6 +136,9 @@ class FootballScoreBoardStartGameTest extends TestCase
             ->method("get")
             ->willReturn(null);
 
+        $scoreBoardMock
+            ->expects($this->once())
+            ->method("add");
 
         $expectedResult = Game::createOngoingGame(
             Team::createNewTeam("United States"),
@@ -137,7 +153,10 @@ class FootballScoreBoardStartGameTest extends TestCase
         $this->assertSame($expectedResult->gameStatus(), $result->gameStatus());
         $this->assertSame($expectedResult->awayTeam()->teamName(), $result->awayTeam()->teamName());
         $this->assertSame($expectedResult->homeTeam()->teamName(), $result->homeTeam()->teamName());
-        $this->assertNotSame($game, $result); //check if thi isn't 100% same object reference
+        $this->assertNotSame($game, $result);
+        //check if thi isn't 100% same object reference to prevent any modification outside the service,
+        // even if objets aren't mutable someone can store score history
+        // from or store returned object, and he doesn't want to change his state from inside the service
     }
 
 //name from businees prespective: testIfTeamsCanPlayVsHimselfs
@@ -164,4 +183,47 @@ class FootballScoreBoardStartGameTest extends TestCase
 
     }
 
+    /**
+     * @throws Exception
+     */
+    public function testTheIfTheTeamsHasSwappedNames(): void
+    {
+//given
+        $game = Game::createNewGame(
+            "United States",
+            "Poland"
+        );
+
+        $gameInStorage = Game::createNewGame(
+            "Poland",
+            "United States",
+        );
+
+        /** @var ScoreBoardStorage $scoreBoardMock */
+        $scoreBoardMock = $this->createMock(ScoreBoardStorage::class);
+
+        $scoreBoardMock
+            ->expects($this->atLeast(1))
+            ->method("get")
+            ->with($this->anything())
+            ->willReturnCallback(function (Game $callbackGame) use ($gameInStorage, $game) {
+                if ($callbackGame->homeTeam()->teamName() == "United States" && $callbackGame->awayTeam()->teamName() == "Poland") {
+                    return $game;
+                }
+                if ($callbackGame->homeTeam()->teamName() == "Poland" && $callbackGame->awayTeam()->teamName() == "United States") {
+                    return $gameInStorage;
+                }
+            }
+            );
+
+
+        $scoreBoard = new FootballScoreBoard($scoreBoardMock);
+
+        $this->expectException(GameExistsException::class);
+
+        //when
+        $scoreBoard->startGame($game);
+
+    }
+//Swapped Names test when u swap names
 }

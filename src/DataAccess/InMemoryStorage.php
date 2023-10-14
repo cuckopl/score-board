@@ -14,7 +14,6 @@ class InMemoryStorage implements ScoreBoardStorage
         $this->games = [];
     }
 
-
     public function get(Game $game): Game
     {
         return $this->games[$game->awayTeam()->teamName() . $game->homeTeam()->teamName()] = $game;

@@ -4,7 +4,7 @@ namespace App\Contract\Dto;
 
 final class Game
 {
-    private GameStatus $gameStatus = GameStatus::NOT_STARTED;
+    private GameStatus $gameStatus;
     private Team $homeTeam;
     private Team $awayTeam;
 
