@@ -8,14 +8,18 @@ use App\Contract\Exception\GameException;
 use App\Contract\Exception\GameExistsException;
 use App\Domain\FootballScoreBoard;
 use App\Domain\Repository\ScoreBoardStorage;
+use App\Domain\Validator\ValidatorPipeline;
 use DG\BypassFinals;
 use PHPUnit\Framework\MockObject\Exception;
 use PHPUnit\Framework\TestCase;
 
 class FootballScoreBoardStartGameTest extends TestCase
 {
-//StartGame
-    public function testIfGameAlreadyExists(): void
+    /**
+     * @throws Exception
+     * @throws GameException
+     */
+    public function testThrowExceptionIfGameIsAlreadyStarted(): void
     {
 //given
         $game = Game::createNewGame(
@@ -26,19 +30,20 @@ class FootballScoreBoardStartGameTest extends TestCase
         /** @var ScoreBoardStorage $scoreBoardMock */
         $scoreBoardMock = $this->createMock(ScoreBoardStorage::class);
         $scoreBoardMock
-            ->expects($this->once())
+            ->expects($this->atLeastOnce())
             ->method("get")
             ->willReturn($game);
-        $scoreBoard = new FootballScoreBoard($scoreBoardMock);
+        $scoreBoard = new FootballScoreBoard($scoreBoardMock, new ValidatorPipeline());
 
-        //then
-        $this->expectException(\Exception::class);
+//then
+        $this->expectException(GameException::class);
+        $this->expectExceptionMessage("Game is already started");
 
-        //when
+//when
         $scoreBoard->startGame($game);
     }
 
-    public function testIfGameScoreIsZeroOnStart(): void
+    public function testThrowExceptionIfScoreIsDifferentThanZeroToZero(): void
     {
         //I really want to have DTOs classes to be final and no one can extend them.
         BypassFinals::enable();
@@ -55,50 +60,19 @@ class FootballScoreBoardStartGameTest extends TestCase
             ->method("homeTeam")
             ->willReturn(Team::updateTeam("Poland", 5));
 
-        $scoreBoard = new FootballScoreBoard($this->createMock(ScoreBoardStorage::class));
+        $scoreBoard = new FootballScoreBoard($this->createMock(ScoreBoardStorage::class), new ValidatorPipeline());
 
-        //then
+//then
         $this->expectException(GameException::class);
+        $this->expectExceptionMessage("Game can't be started because of score should be starting from 0:0");
 
-        //when
+//when
         $scoreBoard->startGame($game);
-    }
-
-    public function testCanWeAddGame(): void
-    {
-        //given
-        $game = Game::createNewGame(
-            "United States",
-            "Poland"
-        );
-
-        $expectedResult = Game::createOngoingGame(
-            Team::createNewTeam("United States"),
-            Team::createNewTeam("Poland")
-        );
-
-        /** @var ScoreBoardStorage $scoreBoardMock */
-        $scoreBoardMock = $this->createMock(ScoreBoardStorage::class);
-        $scoreBoardMock
-            ->expects($this->once())
-            ->method("get")
-            ->willReturn(null);
-
-        $scoreBoard = new FootballScoreBoard($scoreBoardMock);
-        //when
-        $result = $scoreBoard->startGame($game);
-
-        $this->assertSame($expectedResult->gameStatus(), $result->gameStatus());
-        $this->assertSame($expectedResult->awayTeam()->teamName(), $result->awayTeam()->teamName());
-        $this->assertSame($expectedResult->homeTeam()->teamName(), $result->homeTeam()->teamName());
-        $this->assertNotSame($game, $result);
-
-
     }
 
     public function testThrowExceptionOnWrongGameStatus(): void
     {
-        //given
+//given
         $game =
             Game::createOngoingGame(
                 Team::createNewTeam("United States"),
@@ -108,22 +82,23 @@ class FootballScoreBoardStartGameTest extends TestCase
         /** @var ScoreBoardStorage $scoreBoardMock */
         $scoreBoardMock = $this->createMock(ScoreBoardStorage::class);
         $scoreBoardMock
-            ->expects($this->never())
             ->method("get")
             ->willReturn(null);
 
-        $scoreBoard = new FootballScoreBoard($scoreBoardMock);
+        $scoreBoard = new FootballScoreBoard($scoreBoardMock, new ValidatorPipeline());
 
-        //then
+//then
         $this->expectException(GameException::class);
+        $this->expectExceptionMessage("We can't create game with status other than NOT_STARTED");
 
-        //when
+//when
         $scoreBoard->startGame($game);
 
     }
 
-    public function testNewGameIsInOnGoingStatus(): void
+    public function testGameCanBeAdded(): void
     {
+        //given
         $game = Game::createNewGame(
             "United States",
             "Poland"
@@ -145,21 +120,17 @@ class FootballScoreBoardStartGameTest extends TestCase
             Team::createNewTeam("Poland")
         );
 
-        $scoreBoard = new FootballScoreBoard($scoreBoardMock);
-        //when
+        $scoreBoard = new FootballScoreBoard($scoreBoardMock, new ValidatorPipeline());
+//when
         $result = $scoreBoard->startGame($game);
 
-        //then
+//then
         $this->assertSame($expectedResult->gameStatus(), $result->gameStatus());
         $this->assertSame($expectedResult->awayTeam()->teamName(), $result->awayTeam()->teamName());
         $this->assertSame($expectedResult->homeTeam()->teamName(), $result->homeTeam()->teamName());
         $this->assertNotSame($game, $result);
-        //check if thi isn't 100% same object reference to prevent any modification outside the service,
-        // even if objets aren't mutable someone can store score history
-        // from or store returned object, and he doesn't want to change his state from inside the service
     }
 
-//name from businees prespective: testIfTeamsCanPlayVsHimselfs
     public function testTheTeamsHaveDifferentNames(): void
     {
 //given
@@ -174,19 +145,19 @@ class FootballScoreBoardStartGameTest extends TestCase
             ->method("get")
             ->willReturn(null);
 
-        $scoreBoard = new FootballScoreBoard($scoreBoardMock);
-
+        $scoreBoard = new FootballScoreBoard($scoreBoardMock, new ValidatorPipeline());
+//then
         $this->expectException(GameException::class);
 
-        //when
+//when
         $scoreBoard->startGame($game);
 
     }
 
     /**
-     * @throws Exception
+     * @throws GameException|Exception
      */
-    public function testTheIfTheTeamsHasSwappedNames(): void
+    public function testThrowExceptionIfAwayTeamIsAlreadyPlayingAsAwayTeam(): void
     {
 //given
         $game = Game::createNewGame(
@@ -217,13 +188,41 @@ class FootballScoreBoardStartGameTest extends TestCase
             );
 
 
-        $scoreBoard = new FootballScoreBoard($scoreBoardMock);
-
+        $scoreBoard = new FootballScoreBoard($scoreBoardMock, new ValidatorPipeline());
+//then
         $this->expectException(GameExistsException::class);
+
+//when
+        $scoreBoard->startGame($game);
+
+    }
+
+    public function testThrowExceptionIfAnyTeamIsAlreadyPlayingWithOtherTeam(): void
+    {
+//given
+        $game = Game::createNewGame(
+            "United States",
+            "Poland"
+        );
+
+        /** @var ScoreBoardStorage $scoreBoardMock */
+        $scoreBoardMock = $this->createMock(ScoreBoardStorage::class);
+        $scoreBoardMock
+            ->method("get")
+            ->willReturn(null);
+
+        $scoreBoardMock
+            ->method("singleTeamIsPlaying")
+            ->willReturn(true);
+
+        $scoreBoard = new FootballScoreBoard($scoreBoardMock, new ValidatorPipeline());
+
+        $this->expectException(GameException::class);
+        $this->expectExceptionMessage("One of the teams in match is already playing game.");
 
         //when
         $scoreBoard->startGame($game);
 
     }
-//Swapped Names test when u swap names
+
 }

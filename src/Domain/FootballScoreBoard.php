@@ -1,44 +1,33 @@
-<?php
+<?php declare(strict_types=1);
 
 namespace App\Domain;
 
 use App\Contract\Dto\Game;
-use App\Contract\Dto\GameStatus;
 use App\Contract\Exception\GameException;
-use App\Contract\Exception\GameExistsException;
 use App\Contract\Exception\GameIsMissingException;
-use App\Contract\Exception\InvalidScoreException;
 use App\Contract\GameSummary;
 use App\Contract\ScoreBoard;
 use App\Domain\Mapper\GameMapper;
 use App\Domain\Repository\ScoreBoardStorage;
+use App\Domain\Validator\ValidatorPipeline;
 
 class FootballScoreBoard implements ScoreBoard
 {
     private ScoreBoardStorage $scoreBoardStorage;
+    private ValidatorPipeline $validatorPipeline;
 
-    public function __construct($scoreBoardStorage)
+    public function __construct(ScoreBoardStorage $scoreBoardStorage, ValidatorPipeline $validatorPipeline)
     {
         $this->scoreBoardStorage = $scoreBoardStorage;
+        $this->validatorPipeline = $validatorPipeline;
     }
 
+    /**
+     * @throws GameException
+     */
     public function startGame(Game $game): Game
     {
-
-        if ($game->awayTeam()->teamName() == $game->homeTeam()->teamName()) {
-            throw new GameException("Teams can't play versus each other");
-        }
-
-        if ($game->awayTeam()->score() != 0 && $game->homeTeam()->score() != 0) {
-            throw new InvalidScoreException("Game can't be started because of score should be starting from 0:0");
-        }
-        if ($game->gameStatus() != GameStatus::NOT_STARTED) {
-            throw new GameException("We can't create game with status other than NOT_STARTED");
-        }
-
-        if ($this->scoreBoardStorage->get($game) != null && $this->scoreBoardStorage->get(GameMapper::swapTeams($game)) != null) {
-            throw new GameExistsException("Game is already started");
-        }
+        $this->validatorPipeline->validateStartGame($game, $this->scoreBoardStorage);
 
         $onGoingGame = GameMapper::toOngoingGame($game);
 
@@ -48,44 +37,36 @@ class FootballScoreBoard implements ScoreBoard
 
     public function updateGame(Game $game): Game
     {
-
         $previousGame = $this->scoreBoardStorage->get($game);
-
-        if ($game->gameStatus() != GameStatus::ON_GOING) {
-            throw new GameException("We can't update game with other status than ON_GOING");
-        }
-
         if ($previousGame == null) {
             throw new GameIsMissingException("Game weren't started");
         }
-
-        if (
-            $previousGame->awayTeam()->score() > $game->awayTeam()->score() ||
-            $previousGame->homeTeam()->score() > $game->homeTeam()->score()
-        ) {
-            throw new InvalidScoreException("Score can't be lower than previous one");
-        }
-
-        if (
-            $previousGame->awayTeam()->score() + 1 < $game->awayTeam()->score() ||
-            $previousGame->homeTeam()->score() + 1 < $game->homeTeam()->score()
-        ) {
-            throw new InvalidScoreException("Score can be incremented only +1 per execution(we can't score 2 point in football)");
-        }
-
+        $this->validatorPipeline->validateUpdateGame($game, $this->scoreBoardStorage);
 
         $this->scoreBoardStorage->update(GameMapper::updateScore($game));
 
         return $game;
     }
 
+    /**
+     * @throws GameIsMissingException
+     */
     public function finishGame(Game $game): Game
     {
-        // TODO: Implement finishGame() method.
+        $previousGame = $this->scoreBoardStorage->get($game);
+        if ($previousGame == null) {
+            throw new GameIsMissingException("Game weren't started");
+        }
+
+        $this->validatorPipeline->validateDeleteGame($game);
+
+        $this->scoreBoardStorage->delete($game);
+        return GameMapper::toFinishedGame($game);
+
     }
 
     public function summaryOfGames(): GameSummary
     {
-        // TODO: Implement finishGame() method.
+        return new SortedGameSummary($this->scoreBoardStorage->fetchAll());
     }
 }

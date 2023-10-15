@@ -18,12 +18,10 @@ final class Team
         return $this->score;
     }
 
-
     public function teamName(): string
     {
         return $this->teamName;
     }
-
 
     public static function createNewTeam(string $teamName): Team
     {
