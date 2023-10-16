@@ -40,7 +40,7 @@ class InMemoryStorage implements ScoreBoardStorage
         return array_merge(array(), $this->games);
     }
 
-    public function singleTeamIsPlaying(Game $game): bool
+    public function isSingleTeamInGame(Game $game): bool
     {
         return !(count(array_filter($this->games, function ($key) use ($game) {
                 return

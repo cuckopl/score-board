@@ -6,7 +6,7 @@ use App\Contract\Dto\Game;
 
 interface ScoreBoardStorage
 {
-    public function singleTeamIsPlaying(Game $game): bool;
+    public function isSingleTeamInGame(Game $game): bool;
 
     public function get(Game $game): ?Game;
 

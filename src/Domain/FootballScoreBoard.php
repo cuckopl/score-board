@@ -35,6 +35,9 @@ class FootballScoreBoard implements ScoreBoard
         return $onGoingGame;
     }
 
+    /**
+     * @throws GameIsMissingException
+     */
     public function updateGame(Game $game): Game
     {
         $previousGame = $this->scoreBoardStorage->get($game);

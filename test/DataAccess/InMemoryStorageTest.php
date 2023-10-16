@@ -21,10 +21,10 @@ class InMemoryStorageTest extends TestCase
             Game::createNewGame("Team 2", "Team 6")
         );
 
-        $result = $inMemoryStorage->singleTeamIsPlaying(Game::createNewGame("Team 2", "Team 3"));
+        $result = $inMemoryStorage->isSingleTeamInGame(Game::createNewGame("Team 2", "Team 3"));
 
         $this->assertSame(true, $result);
     }
 
-    //Skipped other test to keep it shorter
+    //Skipped other test to keep it shorter.
 }

@@ -23,7 +23,7 @@ class GameSingleTeamAlreadyInGame implements Validator
      */
     public function validate(Game $game): void
     {
-        if ($this->scoreBoardStorage->singleTeamIsPlaying($game)) {
+        if ($this->scoreBoardStorage->isSingleTeamInGame($game)) {
             throw new GameExistsException($this->message);
         }
     }

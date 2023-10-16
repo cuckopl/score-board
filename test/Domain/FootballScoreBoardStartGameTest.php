@@ -212,7 +212,7 @@ class FootballScoreBoardStartGameTest extends TestCase
             ->willReturn(null);
 
         $scoreBoardMock
-            ->method("singleTeamIsPlaying")
+            ->method("isSingleTeamInGame")
             ->willReturn(true);
 
         $scoreBoard = new FootballScoreBoard($scoreBoardMock, new ValidatorPipeline());
